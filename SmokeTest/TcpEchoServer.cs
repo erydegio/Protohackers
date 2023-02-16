@@ -6,11 +6,13 @@ public class TcpEchoServer
 {
     private readonly string _ip;
     private readonly int _port;
+    
     public TcpEchoServer(string ip, int port)
     {
         _ip = ip;
         _port = port;
     }
+    
     public async Task Run()
     {
         var listener = new TcpListener(IPAddress.Parse(_ip), _port);
