@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 
 namespace ProtoHackers;
+
 public class TcpEchoServer
 {
     private readonly string _ip;

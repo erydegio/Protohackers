@@ -1,4 +1,4 @@
 ﻿using ProtoHackers;
 
-var server = new TcpEchoServer("192.168.0.145", 8001);
+var server = new TcpEchoServer("127.0.0.1", 8001);
 await server.Run();
