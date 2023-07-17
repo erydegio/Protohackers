@@ -1,12 +1,12 @@
 using System.Net.Sockets;
 
-namespace Protohackers.Problem0;
+namespace ProtoHackers.Problem0;
 
-public class EchoServer : ITcpServer
+public class EchoService : ITcpService
 {
     public async Task Handle(Socket socket)
     {
-        Console.WriteLine("Reading data from" + socket.RemoteEndPoint);
+        Console.WriteLine($"Reading data from {socket.RemoteEndPoint}");
         try
         {
             await using var stream = new NetworkStream(socket, true);

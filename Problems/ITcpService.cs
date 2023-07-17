@@ -1,8 +1,8 @@
 using System.Net.Sockets;
 
-namespace Protohackers;
+namespace ProtoHackers;
 
-public interface ITcpServer
+public interface ITcpService
 {
     public Task Handle(Socket socket);
 }

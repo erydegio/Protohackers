@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Protohackers;
+namespace ProtoHackers;
 
-public static class TcpServer
+public static class TcpListener
 {
     private const int Port = 8001;
 
@@ -13,7 +13,7 @@ public static class TcpServer
         listener.Bind(new IPEndPoint(IPAddress.Any, Port));
         listener.Listen();
         
-        Console.WriteLine($"Start listen on {listener.LocalEndPoint} ...");
+        Console.WriteLine($"Start listening on port {Port}");
         return listener;
     }
 }

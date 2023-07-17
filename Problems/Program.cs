@@ -1,3 +1,3 @@
-﻿using Protohackers.Problem0;
+﻿using ProtoHackers.Problem0;
 
-await SmokeTest.ProblemOResponse();
+await SmokeTest.Init();
