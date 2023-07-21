@@ -4,26 +4,23 @@ namespace ProtoHackers.Problem0;
 
 public class EchoService : ITcpService
 {
-    private const uint BufferSize = 4096;
     public async Task Handle(Socket conn)
     {
         Console.WriteLine($"Reading data from {conn.RemoteEndPoint}");
-        
-        var buffer = new byte[BufferSize];
-        try
+
+        var buffer = new byte[conn.ReceiveBufferSize];
+
+        while (true)
         {
-            while (true)
+            int received = await conn.ReceiveAsync(buffer, SocketFlags.None);
+            if (received == 0)
             {
-                int received = await conn.ReceiveAsync(buffer, SocketFlags.None);
-                if (received == 0)
-                    break;
-                
-                await conn.SendAsync(buffer[..received], SocketFlags.None);
+                Console.WriteLine($"Connection closed to {conn.RemoteEndPoint}");
+                conn.Close();
+                break;
             }
-        }
-        finally
-        {
-            conn.Dispose();
+
+            await conn.SendAsync(buffer[..received], SocketFlags.None);
         }
     }
 }

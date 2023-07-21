@@ -10,7 +10,7 @@ public static class TcpListener
     public static Socket Start()
     {
         var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        var ipEndPoint = new IPEndPoint(IPAddress.Loopback, Port);
+        var ipEndPoint = new IPEndPoint(IPAddress.Any, Port);
         listener.Bind(ipEndPoint);
         listener.Listen();
         
