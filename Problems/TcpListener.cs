@@ -5,7 +5,7 @@ namespace ProtoHackers;
 
 public static class TcpListener
 {
-    private const int Port = 8001;
+    private const int Port = 9001;
 
     public static Socket Start()
     {
