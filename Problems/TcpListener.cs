@@ -5,15 +5,13 @@ namespace ProtoHackers;
 
 public static class TcpListener
 {
-    private const int Port = 9001;
-
-    public static Socket Start()
+    public static Socket Start(int port)
     {
         var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        listener.Bind(new IPEndPoint(IPAddress.Any, Port));
+        listener.Bind(new IPEndPoint(IPAddress.Any, port));
         listener.Listen();
         
-        Console.WriteLine($"Start listening on port {Port}");
+        Console.WriteLine($"Start listening on port {port}");
         return listener;
     }
 }

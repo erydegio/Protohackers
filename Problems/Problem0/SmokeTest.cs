@@ -4,7 +4,7 @@ public static class SmokeTest
 {
     public static async Task Init()
     {
-        using var server = TcpListener.Start();
+        using var server = TcpListener.Start(9001);
         while (true)
         {
             var socket = await server.AcceptAsync();
