@@ -9,10 +9,48 @@ public class PrimeService : ITcpService
     public async Task Handle(Socket conn) 
     {
         Console.WriteLine($"Reading data from {conn.RemoteEndPoint}");
-        
         var stream = new NetworkStream(conn);
-        var reader = PipeReader.Create(stream);
+        var writer = PipeWriter.Create(stream); // consumes data from the network and puts it in buffers.
+        var reader = PipeReader.Create(stream); // constructing the appropriate data structures.
+
+         Task write = WriteFromSocketAsync(conn, writer);
+         Task read = ReadFromPipeAsync(reader);
         
+        await Task.WhenAll(read, write);
+    }
+
+    private async Task WriteFromSocketAsync(Socket socket, PipeWriter writer)
+    {
+        const int minimumBufferSize = 512; //At least
+
+        while (true)
+        {
+            Memory<byte> memory = writer.GetMemory(minimumBufferSize);
+            try 
+            {
+                int bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None);
+                if (bytesRead == 0) break;
+                
+                // Tell the PipeWriter how much was read from the Socket
+                writer.Advance(bytesRead);
+            }
+            catch (Exception ex)
+            {
+               // LogError(ex); todo
+                break;
+            }
+
+            // Make the data available to the PipeReader
+            FlushResult result = await writer.FlushAsync();
+
+            if (result.IsCompleted) break;
+        }
+
+        // Tell the PipeReader that there's no more data coming
+        await writer.CompleteAsync();
+    }
+    private async Task ReadFromPipeAsync(PipeReader reader)
+    {
         while (true)
         {
             ReadResult result = await reader.ReadAsync();
@@ -20,25 +58,24 @@ public class PrimeService : ITcpService
 
             while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                ProcessLine(line);
+                var response = ProcessLine(line);;
             }
 
             // Tell the PipeReader how much of the buffer has been consumed.
             reader.AdvanceTo(buffer.Start, buffer.End);
 
             // Stop reading if there's no more data coming
-            if (result.IsCompleted)
-            {
-                break;
-            }
+            if (result.IsCompleted) break;
         }
     }
 
-    private void ProcessLine(in ReadOnlySequence<byte> readOnlySequence)
+    private string ProcessLine(in ReadOnlySequence<byte> readOnlySequence)
     {
         // Line parsing logic
+        return String.Empty;
     }
 
+    // Buffer the incoming data until a new line is found.
     private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
         // Look for EOL.
@@ -52,6 +89,8 @@ public class PrimeService : ITcpService
 
         // Skip the line + the \n.
         line = buffer.Slice(0, position.Value);
+        
+        // Remove the parsed message from the input buffer.
         buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
         return true;
     }
@@ -72,22 +111,16 @@ public class PrimeService : ITcpService
                 return input == Math.Floor(input);
         }
     }
-
-    private Request ReadRequest()
+    
+    private class PrimServiceResponse
     {
-        return new Request();
-    }
+        public const string Method = "isPrime";
+        public bool IsPrime { get; set; }
 
-    private Response HandleRequest(Request req)
-    {
-        return new Response("", false);
-    }
-
+        public PrimServiceResponse(bool isPrime)
+        {
+            IsPrime = isPrime;
+        }
+    };
 }
-
-public record Response(string Method, bool IsPrime);
-
-
-public record Request();
-
 

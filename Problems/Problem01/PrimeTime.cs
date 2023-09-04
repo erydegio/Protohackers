@@ -1,6 +1,6 @@
 namespace ProtoHackers.Problem01;
 
-public class PrimeTime
+public static class PrimeTime
 {
     public static async Task Init()
     {
