@@ -1,3 +1,4 @@
 ﻿using ProtoHackers.Problem0;
+using ProtoHackers.Problem01;
 
-await SmokeTest.Init();
+await PrimeTime.Init();

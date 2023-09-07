@@ -1,56 +1,22 @@
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
 
 namespace ProtoHackers.Problem01;
 
 public class PrimeService : ITcpService
 {
-    public async Task Handle(Socket conn) 
+    private IRequestHandler _requestHandler;
+    public async Task Handle(Socket socket)
     {
-        Console.WriteLine($"Reading data from {conn.RemoteEndPoint}");
-        var stream = new NetworkStream(conn);
-        var writer = PipeWriter.Create(stream); // consumes data from the network and puts it in buffers.
-        var reader = PipeReader.Create(stream); // constructing the appropriate data structures.
+        Console.WriteLine($"[{socket.RemoteEndPoint}]: connected");
 
-         Task write = WriteFromSocketAsync(conn, writer);
-         Task read = ReadFromPipeAsync(reader);
-        
-        await Task.WhenAll(read, write);
-    }
+        var stream = new NetworkStream(socket);
+        var reader = PipeReader.Create(stream);
+        var writer = new StreamWriter(stream); //todo use pipewriter
 
-    private async Task WriteFromSocketAsync(Socket socket, PipeWriter writer)
-    {
-        const int minimumBufferSize = 512; //At least
-
-        while (true)
-        {
-            Memory<byte> memory = writer.GetMemory(minimumBufferSize);
-            try 
-            {
-                int bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None);
-                if (bytesRead == 0) break;
-                
-                // Tell the PipeWriter how much was read from the Socket
-                writer.Advance(bytesRead);
-            }
-            catch (Exception ex)
-            {
-               // LogError(ex); todo
-                break;
-            }
-
-            // Make the data available to the PipeReader
-            FlushResult result = await writer.FlushAsync();
-
-            if (result.IsCompleted) break;
-        }
-
-        // Tell the PipeReader that there's no more data coming
-        await writer.CompleteAsync();
-    }
-    private async Task ReadFromPipeAsync(PipeReader reader)
-    {
         while (true)
         {
             ReadResult result = await reader.ReadAsync();
@@ -58,27 +24,41 @@ public class PrimeService : ITcpService
 
             while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                var response = ProcessLine(line);;
+                ProcessLine(line, writer);
             }
 
-            // Tell the PipeReader how much of the buffer has been consumed.
             reader.AdvanceTo(buffer.Start, buffer.End);
 
-            // Stop reading if there's no more data coming
-            if (result.IsCompleted) break;
+            // Stop reading if there's no more data coming.
+            if (result.IsCompleted)
+                break;
         }
-    }
 
-    private string ProcessLine(in ReadOnlySequence<byte> readOnlySequence)
+        await reader.CompleteAsync();
+
+        Console.WriteLine($"[{socket.RemoteEndPoint}]: disconnected");
+    }
+    
+    private void ProcessLine(in ReadOnlySequence<byte> readOnlySequence, StreamWriter writer)
     {
-        // Line parsing logic
-        return String.Empty;
+        foreach (var segment in readOnlySequence)
+        { 
+            try
+            {
+                var response = _requestHandler.HandleRequest(segment);
+                writer.Write(JsonSerializer.Serialize(response, new JsonSerializerOptions(){ PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            }
+            catch (Exception)
+            {
+                writer.Write("malformed");
+            }
+            Console.WriteLine(Encoding.UTF8.GetString(segment.Span));
+        }
     }
 
     // Buffer the incoming data until a new line is found.
     private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
-        // Look for EOL.
         SequencePosition? position = buffer.PositionOf((byte)'\n');
 
         if (position == null)
@@ -95,32 +75,7 @@ public class PrimeService : ITcpService
         return true;
     }
 
-    public bool IsPrime(decimal n, int i=2)
-    {
-        if (!IsInteger(n))
-            return false;
-        if (n <= 2) 
-            return n == 2; 
-        if (n % i == 0) 
-            return false; 
-        return i * i > n || IsPrime(n, i + 1);
-        
-        bool IsInteger(decimal input)
-        {
-                // Check if the decimal number has no fractional part
-                return input == Math.Floor(input);
-        }
-    }
-    
-    private class PrimServiceResponse
-    {
-        public const string Method = "isPrime";
-        public bool IsPrime { get; set; }
-
-        public PrimServiceResponse(bool isPrime)
-        {
-            IsPrime = isPrime;
-        }
-    };
+    public record PrimServiceResponse(string Method, bool Prime);
+    public record PrimServiceRequest(string Method, decimal Number);
 }
 
