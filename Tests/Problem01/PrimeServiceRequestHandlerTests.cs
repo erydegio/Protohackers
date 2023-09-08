@@ -1,11 +1,10 @@
 using System.Text;
 using ProtoHackers.Problem01;
 
-namespace Tests;
+namespace Tests.Problem01;
 
-public class Problem01Tests
+public class PrimeServiceRequestHandlerTests
 {
-
     [TestCase(9, false)] 
     [TestCase(97,true)]    
     [TestCase(97.77,false)]

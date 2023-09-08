@@ -9,13 +9,18 @@ namespace ProtoHackers.Problem01;
 public class PrimeService : ITcpService
 {
     private IRequestHandler _requestHandler;
+
+    public PrimeService()
+    {
+        _requestHandler = new PrimeServiceRequestHandler();
+    }
     public async Task Handle(Socket socket)
     {
         Console.WriteLine($"[{socket.RemoteEndPoint}]: connected");
 
-        var stream = new NetworkStream(socket);
+        var stream = new NetworkStream(socket, true);
         var reader = PipeReader.Create(stream);
-        var writer = new StreamWriter(stream); //todo use pipewriter
+        // var writer = new StreamWriter(stream); //todo use pipewriter
 
         while (true)
         {
@@ -24,35 +29,41 @@ public class PrimeService : ITcpService
 
             while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                ProcessLine(line, writer);
+                await ProcessLine(line, stream);
             }
 
             reader.AdvanceTo(buffer.Start, buffer.End);
 
             // Stop reading if there's no more data coming.
             if (result.IsCompleted)
+            {
                 break;
+            }
         }
 
         await reader.CompleteAsync();
 
-        Console.WriteLine($"[{socket.RemoteEndPoint}]: disconnected");
+        //Console.WriteLine($"[{socket.RemoteEndPoint}]: disconnected");
     }
-    
-    private void ProcessLine(in ReadOnlySequence<byte> readOnlySequence, StreamWriter writer)
+
+    private async Task ProcessLine(ReadOnlySequence<byte> readOnlySequence, NetworkStream stream)
     {
         foreach (var segment in readOnlySequence)
-        { 
-            try
-            {
-                var response = _requestHandler.HandleRequest(segment);
-                writer.Write(JsonSerializer.Serialize(response, new JsonSerializerOptions(){ PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
-            }
-            catch (Exception)
-            {
-                writer.Write("malformed");
-            }
-            Console.WriteLine(Encoding.UTF8.GetString(segment.Span));
+        {
+                try
+                {
+                    var response = _requestHandler.HandleRequest(segment);
+                    var json = JsonSerializer.Serialize(response,
+                        new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                    
+                    Byte[] data = Encoding.ASCII.GetBytes(json);
+                    await stream.WriteAsync(data);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    await stream.WriteAsync("malformed"u8.ToArray());
+                }
         }
     }
 
@@ -69,7 +80,7 @@ public class PrimeService : ITcpService
 
         // Skip the line + the \n.
         line = buffer.Slice(0, position.Value);
-        
+
         // Remove the parsed message from the input buffer.
         buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
         return true;
@@ -78,4 +89,3 @@ public class PrimeService : ITcpService
     public record PrimServiceResponse(string Method, bool Prime);
     public record PrimServiceRequest(string Method, decimal Number);
 }
-
