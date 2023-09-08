@@ -20,7 +20,6 @@ public class PrimeService : ITcpService
 
         var stream = new NetworkStream(socket, true);
         var reader = PipeReader.Create(stream);
-        // var writer = new StreamWriter(stream); //todo use pipewriter
 
         while (true)
         {
@@ -42,28 +41,27 @@ public class PrimeService : ITcpService
         }
 
         await reader.CompleteAsync();
-
-        //Console.WriteLine($"[{socket.RemoteEndPoint}]: disconnected");
     }
 
     private async Task ProcessLine(ReadOnlySequence<byte> readOnlySequence, NetworkStream stream)
     {
         foreach (var segment in readOnlySequence)
         {
-                try
-                {
-                    var response = _requestHandler.HandleRequest(segment);
-                    var json = JsonSerializer.Serialize(response,
-                        new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-                    
-                    Byte[] data = Encoding.ASCII.GetBytes(json);
-                    await stream.WriteAsync(data);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                    await stream.WriteAsync("malformed"u8.ToArray());
-                }
+            try
+            {
+                var response = _requestHandler.HandleRequest(segment);
+                var json = JsonSerializer.Serialize(response,
+                    new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+
+                Byte[] data = Encoding.ASCII.GetBytes(json);
+
+                await stream.WriteAsync(data);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                await stream.WriteAsync("malformed"u8.ToArray());
+            }
         }
     }
 
