@@ -3,12 +3,13 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Exception = System.Exception;
 
 namespace ProtoHackers.Problem01;
 
 public class PrimeService : ITcpService
 {
-    private IRequestHandler _requestHandler;
+    private readonly IRequestHandler _requestHandler;
 
     public PrimeService()
     {
@@ -52,15 +53,15 @@ public class PrimeService : ITcpService
                 var response = _requestHandler.HandleRequest(segment);
                 var json = JsonSerializer.Serialize(response,
                     new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+                var delimitedResponse = $"{json}\n";
 
-                Byte[] data = Encoding.ASCII.GetBytes(json);
-
+                Byte[] data = Encoding.ASCII.GetBytes(delimitedResponse);
                 await stream.WriteAsync(data);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is JsonFormatException or MalformedRequestException)
             {
-                Console.WriteLine(e.Message);
-                await stream.WriteAsync("malformed"u8.ToArray());
+                var response = Encoding.ASCII.GetBytes("{\"malformed\":\""+$"{e.Message}"+"\"}\n");
+                await stream.WriteAsync(response);
             }
         }
     }
@@ -83,7 +84,4 @@ public class PrimeService : ITcpService
         buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
         return true;
     }
-
-    public record PrimServiceResponse(string Method, bool Prime);
-    public record PrimServiceRequest(string Method, decimal Number);
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 namespace ProtoHackers.Problem01;
@@ -7,42 +8,50 @@ public class PrimeServiceRequestHandler : IRequestHandler
     private JsonSerializerOptions? _jsonOptions =
         new (){ PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     
-    public PrimeService.PrimServiceResponse HandleRequest(ReadOnlyMemory<byte> line)
+    public PrimServiceResponse HandleRequest(ReadOnlyMemory<byte> line)
     {
         var request = Deserialize(line);
         return Validate(request);
+        
     }
 
-    private PrimeService.PrimServiceResponse Validate(PrimeService.PrimServiceRequest request)
+    private PrimServiceResponse Validate(PrimServiceRequest request)
     {
         if (request.Method != "isPrime")
             throw new MalformedRequestException("Incorrect method.");
-        
-        return new PrimeService.PrimServiceResponse(request.Method, IsPrime(request.Number));
+        return new PrimServiceResponse(request.Method, IsPrime(request.Number));
     }
 
-    PrimeService.PrimServiceRequest? Deserialize(ReadOnlyMemory<byte> segment)
+    PrimServiceRequest? Deserialize(ReadOnlyMemory<byte> segment)
     {
         var utf8Reader = new Utf8JsonReader(segment.Span);
         try
         {
-            return JsonSerializer.Deserialize<PrimeService.PrimServiceRequest>(ref utf8Reader, _jsonOptions);
+            return JsonSerializer.Deserialize<PrimServiceRequest>(ref utf8Reader, _jsonOptions);
         }
-        catch (Exception)
+        catch (Exception e)
         {
             throw new JsonFormatException("Invalid json format.");
         }
     }
     
-    public static bool IsPrime(decimal n, int i=2)
+    public static bool IsPrime(decimal n)
     {
         if (!IsInteger(n))
             return false;
-        if (n <= 2) 
-            return n == 2; 
-        if (n % i == 0) 
-            return false; 
-        return i * i > n || IsPrime(n, i + 1);
+        if (n == 2)
+            return true;
+        if (n < 2 || n % 2 == 0)
+            return false;
+        
+        int sqrt = (int)Math.Sqrt((double)n);
+        for (int divisor = 3; divisor <= sqrt; divisor += 2)
+        {
+            if (n % divisor == 0)
+                return false;
+        }
+
+        return true;
         
         bool IsInteger(decimal input)
         {
@@ -61,3 +70,6 @@ public class JsonFormatException : Exception
 {
     public JsonFormatException(string message) : base(message) { }
 }
+
+public record PrimServiceResponse(string Method, bool Prime);
+public record PrimServiceRequest(string Method, long Number);

@@ -16,7 +16,7 @@ public class Problem01Tests
     }
 
     [TestCase("{\"method\":\"isPrime\",\"number\":97}\n", "true")]
-    [TestCase("{\"method\":\"isPrime\",\"number\":21}\n", "false")]
+    [TestCase("{\"method\":\"isPrime\",\"number\":97.8}\n", "false")]
     public async Task ServerReceiveConformedRequest(string message, string isPrime)
     {
         byte[] buffer = new byte[256];
@@ -33,13 +33,12 @@ public class Problem01Tests
         Assert.AreEqual(expected, response);
     }
     
-    [TestCase("hola\n")]
-    [TestCase("{\"method\":\"wrongMethod\",\"number\":21}\n")]
-    public async Task ServerReceiveMalformedRequest(string message)
+    [TestCase("hola\n", "{\"malformed\":\"Invalid json format.\"}\n")]
+    [TestCase("{\"method\":\"wrongMethod\",\"number\":21}\n", "{\"malformed\":\"Incorrect method.\"}\n")]
+    public async Task ServerReceiveMalformedRequest(string message, string expected)
     {
         byte[] buffer = new byte[256];
         using var client = new TcpClient();
-        var expected = "malformed";
 
         await client.ConnectAsync(IPAddress.Loopback, ServerPort);
         await client.GetStream().WriteAsync(Encoding.UTF8.GetBytes(message));

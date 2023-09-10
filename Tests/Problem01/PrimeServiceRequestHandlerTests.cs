@@ -13,7 +13,7 @@ public class PrimeServiceRequestHandlerTests
     {
         var res = PrimeServiceRequestHandler.IsPrime(number);
         
-       Assert.AreEqual(res, expected);
+       Assert.AreEqual(expected,res );
     }
 
     [Test]
