@@ -4,5 +4,5 @@ namespace ProtoHackers;
 
 public interface IRequestHandler
 {
-    public PrimServiceResponse HandleRequest(ReadOnlyMemory<byte> line);
+    public byte[] HandleRequest(ReadOnlyMemory<byte> line);
 }
