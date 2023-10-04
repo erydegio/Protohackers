@@ -11,17 +11,16 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
     private static JsonSerializerOptions? _jsonOptions =
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     
-
-    public bool HandleLine(ReadOnlyMemory<byte> segment, out PrimServiceResponse response)
+    public bool HandleLine(ReadOnlySequence<byte> line, out PrimServiceResponse response)
     {
-        var request = Deserialize(segment);
+        var request = Deserialize(line);
         response = Validate(request);
         return response.Method == "malformed";
     }
 
-    private PrimServiceRequest? Deserialize(ReadOnlyMemory<byte> segment)
+    private PrimServiceRequest? Deserialize(ReadOnlySequence<byte> segment)
     {
-        var utf8Reader = new Utf8JsonReader(segment.Span);
+        var utf8Reader = new Utf8JsonReader(segment);
         try
         {
             return JsonSerializer.Deserialize<PrimServiceRequest>(ref utf8Reader, _jsonOptions);
@@ -65,14 +64,7 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
             }
         }
     }
-    
-    public byte[] Serialize(PrimServiceResponse response)
-    {
-        var json = JsonSerializer.Serialize(response, _jsonOptions);
-        var delimitedResponse = $"{json}\n";
-        
-        return Encoding.ASCII.GetBytes(delimitedResponse);
-    }
+
 
 
     public bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)

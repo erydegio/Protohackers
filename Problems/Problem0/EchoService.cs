@@ -4,7 +4,7 @@ namespace ProtoHackers.Problem0;
 
 public class EchoService : ITcpService
 {
-    public async Task Handle(Socket conn)
+    public async Task HandleClient(Socket conn)
     {
         Console.WriteLine($"Reading data from {conn.RemoteEndPoint}");
 

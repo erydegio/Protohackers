@@ -4,39 +4,28 @@ using Microsoft.Extensions.Logging;
 
 namespace ProtoHackers;
 
-public abstract class TcpServer
+public class TcpServer<TService> where TService : ITcpService, new()
 {
     private Socket _listener;
-    private readonly ILogger _logger;
 
-    protected TcpServer(  ILoggerFactory loggerFactory)
-    {
-        var logger = loggerFactory.CreateLogger("ProtoHackers.TcpServer");
-        _logger = logger;
-        _listener = Start();
-       
-    }
-    private Socket Start(int port = 9001)
+    public TcpServer() =>  _listener = Init();
+    
+        private Socket Init(int port = 9001)
     {
         _listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
         _listener.Bind(new IPEndPoint(IPAddress.Any, port));
         _listener.Listen();
-        
-        _logger.LogInformation($"Start listening on port {port}");
+        Console.WriteLine("Start listen...");
         
         return _listener;
     }
 
-    public async Task Init()
+    public async Task Listen()
     {
         while (true)
         {
             var conn = await _listener.AcceptAsync();
-            _logger.LogInformation("Connected to ..." + conn.RemoteEndPoint); 
-            
-            _ = HandleConnection(conn);
+            _ = new TService().HandleClient(conn); 
         }
     }
-
-    protected abstract Task HandleConnection(Socket socket);
 }

@@ -1,6 +1,12 @@
-﻿using ProtoHackers.Problem0;
+﻿
+using ProtoHackers;
+using ProtoHackers.Problem0;
+using Protohackers.Problem01;
 using ProtoHackers.Problem01;
-using Microsoft.Extensions.Logging;
 
 
-await PrimeTime.Init();
+await new TcpServer<PrimeService>().Listen();
+
+
+
+
