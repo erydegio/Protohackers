@@ -20,7 +20,6 @@ public class PrimeService : ITcpService
         Console.WriteLine("Service Handling client....");
         var stream = new NetworkStream(socket, true);
         _reader = PipeReader.Create(stream);
-        var writer = new Utf8JsonWriter(stream);
         var isMalformed = false;
 
         while (!isMalformed)
@@ -34,8 +33,6 @@ public class PrimeService : ITcpService
                 
                 Console.WriteLine($"response ->{response.Method} {response.Prime} from line: {DecodeReadOnlySequence(line, Encoding.UTF8)}");
                 
-                //WriteJsonResponseAsync(writer, response);
-
                 await stream.WriteAsync(Serialize(response));
 
                 if (isMalformed) 
@@ -53,16 +50,6 @@ public class PrimeService : ITcpService
         socket.Close();
     }
 
-    private  void  WriteJsonResponseAsync( Utf8JsonWriter writer,  PrimServiceResponse response)
-    {
-        writer.WriteStartObject();
-        writer.WriteString("method", response.Method);
-        writer.WriteBoolean("prime", response.Prime);
-        writer.WriteEndObject();
-        writer.WriteRawValue("\n");
-        writer.FlushAsync();
-    }
-    
     public byte[] Serialize(PrimServiceResponse response)
     {
         var json = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
@@ -71,19 +58,16 @@ public class PrimeService : ITcpService
         return Encoding.ASCII.GetBytes(delimitedResponse);
     }
     
-    static string DecodeReadOnlySequence(ReadOnlySequence<byte> byteSequence, Encoding encoding)
+    // Used to log
+    public static string DecodeReadOnlySequence(ReadOnlySequence<byte> byteSequence, Encoding encoding)
     {
-        // Create a StringBuilder to hold the decoded characters
         var stringBuilder = new StringBuilder();
 
         foreach (var memorySegment in byteSequence)
         {
-            // Decode each memory segment and append it to the StringBuilder
             string segmentString = encoding.GetString(memorySegment.Span);
             stringBuilder.Append(segmentString);
         }
-
-        // Convert the StringBuilder to a string
         return stringBuilder.ToString();
     }
 }

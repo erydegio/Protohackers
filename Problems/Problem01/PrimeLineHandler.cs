@@ -3,6 +3,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Unicode;
+using Microsoft.VisualBasic.CompilerServices;
+using Protohackers.Problem01;
 
 namespace ProtoHackers.Problem01;
 
@@ -13,6 +15,7 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
     
     public bool HandleLine(ReadOnlySequence<byte> line, out PrimServiceResponse response)
     {
+        Console.WriteLine(PrimeService.DecodeReadOnlySequence(line, Encoding.UTF8));
         var request = Deserialize(line);
         response = Validate(request);
         return response.Method == "malformed";
@@ -34,10 +37,16 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
 
     private PrimServiceResponse Validate(PrimServiceRequest? request)
     {
-        if (request is null || request.Method != "isPrime")
+        if (request is null)
             return new PrimServiceResponse("malformed", false);
-
-        return new PrimServiceResponse(request.Method, IsPrime(request.Number));
+        
+        if (request.BigNumber)
+            return new PrimServiceResponse(request.Method, false);
+        
+        if (request.Method != "isPrime" || request.Number is null)
+            return new PrimServiceResponse("malformed", false);
+        
+        return new PrimServiceResponse(request.Method, IsPrime((decimal)request.Number.Value));
 
         bool IsPrime(decimal n)
         {
@@ -85,7 +94,7 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
         return true;
     }
 
-    private record PrimServiceRequest(string Method, long Number);
+    private record PrimServiceRequest(string Method, double? Number, bool BigNumber); //biginteger
 }
 public record PrimServiceResponse(string Method, bool Prime);
 
