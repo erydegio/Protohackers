@@ -37,18 +37,15 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
 
     private PrimServiceResponse Validate(PrimServiceRequest? request)
     {
-        if (request is null)
+        if (request is null || request.Method != "isPrime" || request.Number is null)
             return new PrimServiceResponse("malformed", false);
         
         if (request.BigNumber)
             return new PrimServiceResponse(request.Method, false);
         
-        if (request.Method != "isPrime" || request.Number is null)
-            return new PrimServiceResponse("malformed", false);
-        
-        return new PrimServiceResponse(request.Method, IsPrime((decimal)request.Number.Value));
+        return new PrimServiceResponse(request.Method, IsPrime((long)request.Number.Value));
 
-        bool IsPrime(decimal n)
+        bool IsPrime(long n)
         {
             if (!IsInteger(n))
                 return false;
@@ -57,7 +54,7 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
             if (n < 2 || n % 2 == 0)
                 return false;
 
-            int sqrt = (int)Math.Sqrt((double)n);
+            int sqrt = (int)Math.Sqrt(n);
             for (int divisor = 3; divisor <= sqrt; divisor += 2)
             {
                 if (n % divisor == 0)
@@ -73,9 +70,7 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
             }
         }
     }
-
-
-
+    
     public bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
         SequencePosition? position = buffer.PositionOf((byte)'\n');
@@ -94,7 +89,7 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
         return true;
     }
 
-    private record PrimServiceRequest(string Method, double? Number, bool BigNumber); //biginteger
+    private record PrimServiceRequest(string Method, double? Number, bool BigNumber);
 }
 public record PrimServiceResponse(string Method, bool Prime);
 
