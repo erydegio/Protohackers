@@ -3,85 +3,71 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using Exception = System.Exception;
+using ProtoHackers;
+using ProtoHackers.Problem01;
 
-namespace ProtoHackers.Problem01;
+namespace Protohackers.Problem01;
 
 public class PrimeService : ITcpService
 {
-    private readonly IRequestHandler _requestHandler;
+    private PrimeLineHandler? _lineHandler;
+    private PipeReader? _reader;
 
-    public PrimeService()
-    {
-        _requestHandler = new PrimeServiceRequestHandler();
-    }
-    public async Task Handle(Socket socket)
-    {
-        Console.WriteLine($"[{socket.RemoteEndPoint}]: connected");
+    public PrimeService() =>  _lineHandler = new PrimeLineHandler();
 
+    public async Task HandleClient(Socket socket)
+    {
+        Console.WriteLine("Service Handling client....");
         var stream = new NetworkStream(socket, true);
-        var reader = PipeReader.Create(stream);
+        _reader = PipeReader.Create(stream);
+        var isMalformed = false;
 
-        while (true)
+        while (!isMalformed)
         {
-            ReadResult result = await reader.ReadAsync();
+            ReadResult result = await _reader.ReadAsync();
             ReadOnlySequence<byte> buffer = result.Buffer;
 
-            while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
+            while (_lineHandler!.TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                await ProcessLine(line, stream);
+                isMalformed = _lineHandler.HandleLine(line, out PrimServiceResponse response);
+                
+                Console.WriteLine($"response ->{response.Method} {response.Prime} from line: {DecodeReadOnlySequence(line, Encoding.UTF8)}");
+                
+                await stream.WriteAsync(Serialize(response));
+
+                if (isMalformed) 
+                    break;
             }
 
-            reader.AdvanceTo(buffer.Start, buffer.End);
+            _reader.AdvanceTo(buffer.Start, buffer.End);
 
-            // Stop reading if there's no more data coming.
-            if (result.IsCompleted)
-            {
+            // Stop reading if there's no more data coming
+            if (result.IsCompleted) 
                 break;
-            }
         }
 
-        await reader.CompleteAsync();
+        await _reader.CompleteAsync();
+        socket.Close();
     }
 
-    private async Task ProcessLine(ReadOnlySequence<byte> readOnlySequence, NetworkStream stream)
+    public byte[] Serialize(PrimServiceResponse response)
     {
-        foreach (var segment in readOnlySequence)
-        {
-            try
-            {
-                var response = _requestHandler.HandleRequest(segment);
-                var json = JsonSerializer.Serialize(response,
-                    new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
-                var delimitedResponse = $"{json}\n";
-
-                Byte[] data = Encoding.ASCII.GetBytes(delimitedResponse);
-                await stream.WriteAsync(data);
-            }
-            catch (Exception e) when (e is JsonFormatException or MalformedRequestException)
-            {
-                var response = Encoding.ASCII.GetBytes("{\"malformed\":\""+$"{e.Message}"+"\"}\n");
-                await stream.WriteAsync(response);
-            }
-        }
+        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var delimitedResponse = $"{json}\n"; 
+        
+        return Encoding.ASCII.GetBytes(delimitedResponse);
     }
-
-    // Buffer the incoming data until a new line is found.
-    private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+    
+    // Used to log
+    public static string DecodeReadOnlySequence(ReadOnlySequence<byte> byteSequence, Encoding encoding)
     {
-        SequencePosition? position = buffer.PositionOf((byte)'\n');
+        var stringBuilder = new StringBuilder();
 
-        if (position == null)
+        foreach (var memorySegment in byteSequence)
         {
-            line = default;
-            return false;
+            string segmentString = encoding.GetString(memorySegment.Span);
+            stringBuilder.Append(segmentString);
         }
-
-        // Skip the line + the \n.
-        line = buffer.Slice(0, position.Value);
-
-        // Remove the parsed message from the input buffer.
-        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
-        return true;
+        return stringBuilder.ToString();
     }
 }
