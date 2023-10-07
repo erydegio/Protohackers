@@ -1,18 +1,29 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using ProtoHackers;
+using ProtoHackers.Problem0;
+using Protohackers.Problem01;
 
 namespace Tests;
 
 public class Problem0Tests
 {
-    private const int ServerPort = 9001;
+    private const int ServerPort = 9002;
     private const string Message = "test message";
+    private TcpServer<EchoService> _sut;
 
     [SetUp]
     public void Setup()
     {
-        Init();
+        _sut = new TcpServer<EchoService>(ServerPort);
+        _sut.Listen();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        _sut.Close();
     }
 
     [Test]

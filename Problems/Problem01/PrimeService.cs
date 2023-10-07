@@ -41,7 +41,7 @@ public class PrimeService : ITcpService
             _reader.AdvanceTo(buffer.Start, buffer.End);
 
             // Stop reading if there's no more data coming
-            if (result.IsCompleted) 
+            if (result.IsCompleted || _isMalformed) 
                 break;
         }
 

@@ -7,9 +7,9 @@ public class TcpServer<TService> where TService : ITcpService, new()
 {
     private Socket _listener;
 
-    public TcpServer() =>  _listener = Init();
+    public TcpServer(int port = 9001) =>  _listener = Init(port);
     
-        private Socket Init(int port = 9001)
+        private Socket Init(int port)
     {
         _listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
         _listener.Bind(new IPEndPoint(IPAddress.Any, port));
@@ -26,5 +26,10 @@ public class TcpServer<TService> where TService : ITcpService, new()
             var conn = await _listener.AcceptAsync();
             _ = new TService().HandleClient(conn); 
         }
+    }
+
+    public void Close()
+    { 
+        _listener.Close();
     }
 }
