@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using static ProtoHackers.Problem01.PrimeTime;
 
 namespace Tests.Problem01;
 

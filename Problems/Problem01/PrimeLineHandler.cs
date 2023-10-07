@@ -1,21 +1,16 @@
 using System.Buffers;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Unicode;
-using Microsoft.VisualBasic.CompilerServices;
-using Protohackers.Problem01;
 
 namespace ProtoHackers.Problem01;
 
 public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
 {
-    private static JsonSerializerOptions? _jsonOptions =
-        new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    
+    private readonly JsonSerializerOptions? _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private const byte Delimiter = 10;
+
     public bool HandleLine(ReadOnlySequence<byte> line, out PrimServiceResponse response)
     {
-        Console.WriteLine(PrimeService.DecodeReadOnlySequence(line, Encoding.UTF8));
         var request = Deserialize(line);
         response = Validate(request);
         return response.Method == "malformed";
@@ -88,7 +83,19 @@ public class PrimeLineHandler : ILineHandler<PrimServiceResponse>
         buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
         return true;
     }
-
+    
+    public byte[] Serialize(PrimServiceResponse response)
+    {
+        var json = JsonSerializer.Serialize(response, _jsonOptions);
+        var jsonResponse = Encoding.ASCII.GetBytes(json);
+        
+        Array.Resize(ref jsonResponse, jsonResponse.Length + 1);
+        jsonResponse[^1] = Delimiter;
+        
+        Console.WriteLine(Encoding.UTF8.GetString(jsonResponse));
+        return jsonResponse;
+    }
+    
     private record PrimServiceRequest(string Method, double? Number, bool BigNumber);
 }
 public record PrimServiceResponse(string Method, bool Prime);
