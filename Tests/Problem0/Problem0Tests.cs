@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using static ProtoHackers.Problem0.SmokeTest;
 
 namespace Tests;
 

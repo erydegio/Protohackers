@@ -2,7 +2,6 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
 using ProtoHackers;
 using ProtoHackers.Problem01;
 
@@ -10,32 +9,32 @@ namespace Protohackers.Problem01;
 
 public class PrimeService : ITcpService
 {
-    private PrimeLineHandler? _lineHandler;
+    private readonly ILineHandler<PrimeServiceRequest, PrimeServiceResponse>? _lineHandler;
     private PipeReader? _reader;
+    private NetworkStream? _stream;
+    private bool _isMalformed;
 
     public PrimeService() =>  _lineHandler = new PrimeLineHandler();
 
     public async Task HandleClient(Socket socket)
     {
-        Console.WriteLine("Service Handling client....");
-        var stream = new NetworkStream(socket, true);
-        _reader = PipeReader.Create(stream);
-        var isMalformed = false;
+        _stream = new NetworkStream(socket, true);
+        _reader = PipeReader.Create(_stream);
 
-        while (!isMalformed)
+        while (!_isMalformed)
         {
             ReadResult result = await _reader.ReadAsync();
             ReadOnlySequence<byte> buffer = result.Buffer;
 
             while (_lineHandler!.TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                isMalformed = _lineHandler.HandleLine(line, out PrimServiceResponse response);
+                _isMalformed = HandleRequest(line, out PrimeServiceResponse response);
                 
-                Console.WriteLine($"response ->{response.Method} {response.Prime} from line: {DecodeReadOnlySequence(line, Encoding.UTF8)}");
+                Console.WriteLine($"response ->{response.Method} {response.Prime} from line: {Helpers.DecodeReadOnlySequence(line, Encoding.UTF8)}");
                 
-                await stream.WriteAsync(Serialize(response));
+                await _stream.WriteAsync(_lineHandler.Serialize(response));
 
-                if (isMalformed) 
+                if (_isMalformed) 
                     break;
             }
 
@@ -50,24 +49,46 @@ public class PrimeService : ITcpService
         socket.Close();
     }
 
-    public byte[] Serialize(PrimServiceResponse response)
+    private bool HandleRequest(ReadOnlySequence<byte> line, out PrimeServiceResponse response)
     {
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        var delimitedResponse = $"{json}\n"; 
-        
-        return Encoding.ASCII.GetBytes(delimitedResponse);
+        var request = _lineHandler!.Deserialize(line);
+        response = Validate(request);
+        return response.Method == "malformed";
     }
     
-    // Used to log
-    public static string DecodeReadOnlySequence(ReadOnlySequence<byte> byteSequence, Encoding encoding)
+    private PrimeServiceResponse Validate(PrimeServiceRequest? request)
     {
-        var stringBuilder = new StringBuilder();
+        if (request is null || request.Method != "isPrime" || request.Number is null)
+            return new PrimeServiceResponse("malformed", false);
+        
+        if (request.BigNumber)
+            return new PrimeServiceResponse(request.Method, false);
+        
+        return new PrimeServiceResponse(request.Method, IsPrime((long)request.Number.Value));
 
-        foreach (var memorySegment in byteSequence)
+        bool IsPrime(long n)
         {
-            string segmentString = encoding.GetString(memorySegment.Span);
-            stringBuilder.Append(segmentString);
+            if (!IsInteger(n))
+                return false;
+            if (n == 2)
+                return true;
+            if (n < 2 || n % 2 == 0)
+                return false;
+
+            int sqrt = (int)Math.Sqrt(n);
+            for (int divisor = 3; divisor <= sqrt; divisor += 2)
+            {
+                if (n % divisor == 0)
+                    return false;
+            }
+
+            return true;
+
+            bool IsInteger(decimal input)
+            {
+                // Check if the decimal number has no fractional part
+                return input == Math.Floor(input);
+            }
         }
-        return stringBuilder.ToString();
     }
 }
