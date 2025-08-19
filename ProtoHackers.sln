@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Problems", "Problems\Proble
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{B7527645-0C85-49FF-BDFB-CF2AA18808CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MeansToAnEndServer", "MeansToAnEndServer\MeansToAnEndServer.csproj", "{59828FF0-F228-4DCC-A26E-0B83DA31219A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{B7527645-0C85-49FF-BDFB-CF2AA18808CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B7527645-0C85-49FF-BDFB-CF2AA18808CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B7527645-0C85-49FF-BDFB-CF2AA18808CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59828FF0-F228-4DCC-A26E-0B83DA31219A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59828FF0-F228-4DCC-A26E-0B83DA31219A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59828FF0-F228-4DCC-A26E-0B83DA31219A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59828FF0-F228-4DCC-A26E-0B83DA31219A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
